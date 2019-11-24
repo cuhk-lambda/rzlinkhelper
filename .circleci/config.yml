@@ -10,7 +10,7 @@ jobs:
           no_output_timeout: 3m
           command: |
             apt update
-            apt install -y build-essential cmake make python3
+            apt install -y build-essential cmake make python3 wget
       - run:
           no_output_timeout: 3m
           command: |
