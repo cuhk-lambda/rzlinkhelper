@@ -6,7 +6,11 @@ jobs:
       - image: ubuntu:18.04
     steps:
       - checkout
-      - run: apt install -y build-essential cmake make python3
+      - run:
+          no_output_timeout: 3m
+          command: |
+            apt update
+            apt install -y build-essential cmake make python3
       - run:
           no_output_timeout: 3m
           command: |
