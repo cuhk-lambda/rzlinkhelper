@@ -1,0 +1,3 @@
+[submodule "tests/repo"]
+	path = tests/repo
+	url = https://github.com/cuhk-lambda/cpp-linking-demo

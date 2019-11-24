@@ -1,0 +1,6 @@
+{
+    "callpass_library_path": "./libcallpass.so",
+    "object_dir": "objects",
+    "target_dir": "targets",
+    "debug": true
+}
