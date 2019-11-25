@@ -23,6 +23,7 @@ try:
 except:
   pass
 
+
 def GET(name):
   if name in settings:
     return settings[name]
@@ -32,21 +33,21 @@ def GET(name):
 class Console():
   @staticmethod
   def info(*st):
-   iolock.acquire()
+    iolock.acquire()
     print(colored("[INFO]", "blue"), *st)
-   iolock.release()
+    iolock.release()
 
   @staticmethod
   def warn(*st):
-   iolock.acquire()
+    iolock.acquire()
     print(colored("[WARN]", "yellow"), *st)
-   iolock.release()
+    iolock.release()
 
   @staticmethod
   def error(*st):
-   iolock.acquire()
+    iolock.acquire()
     print(colored("[ERRR]", "red"), *st)
-   iolock.release()
+    iolock.release()
 
   @staticmethod
   def log(*st):
@@ -55,9 +56,9 @@ class Console():
   @staticmethod
   def debug(*st):
     if GET("debug"):
-     iolock.acquire()
+      iolock.acquire()
       print("[DEBG]", *st)
-     iolock.release()
+      iolock.release()
 
 
 def checkDir(subdir, name):
