@@ -32,7 +32,9 @@ All configurations are defined in `settings.json`.
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
     "target_dir": "targets",
-    "debug": true
+    "debug": true,
+    "original_cxx": "/usr/bin/c++",
+    "targeted_cxx": "/usr/bin/clang++"
 }
 ```
 
@@ -40,3 +42,5 @@ All configurations are defined in `settings.json`.
 * `object_dir`: Directory where objects (.a, .o, .so) are generated.
 * `target_dir`: Directory where call statistics are generated.
 * `debug`: Debug mode which is more verbose.
+* `original_cxx`: The original compiler executable path
+* `targeted_cxx`: The clang++ executable path

@@ -6,12 +6,14 @@ settings = {
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
     "target_dir": "targets",
-    "debug": True
+    "debug": True,
+    "original_cxx": "/usr/bin/c++",
+    "targeted_cxx": "/usr/bin/clang++"
 }
 
 try:
-  settings = json.load(open("settings.json"))
-  for i in settings.items():
+  custSettings = json.load(open("settings.json"))
+  for i in custSettings.items():
     settings[i[0]] = i[1]
 except:
   pass

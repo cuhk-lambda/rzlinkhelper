@@ -2,5 +2,7 @@
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
     "target_dir": "targets",
-    "debug": true
+    "debug": true,
+    "original_cxx": "/usr/bin/c++",
+    "targeted_cxx": "/usr/bin/clang++"
 }
