@@ -17,10 +17,10 @@ def do_process(data):
   for i in data["compile"]:
     execname = "(unknown)"
     cmdline = list(filter(lambda x: x != "", i.split(" ")))
-    cmdline.insert(1, "-emit-llvm")
     for argnum in range(len(cmdline)):
       if cmdline[argnum] == originalCXX:
         cmdline[argnum] = utils.GET("targeted_cxx")
+        cmdline.insert(argnum+1, "-emit-llvm")
       elif cmdline[argnum] == "-o":
         cmdline[argnum+1] = os.path.abspath(utils.GET("object_dir") +
                                             "/" + cmdline[argnum+1].split("/")[-1])
