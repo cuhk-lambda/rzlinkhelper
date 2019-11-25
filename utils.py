@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from termcolor import colored
+from multiprocessing import Lock
 
 settings = {
     "callpass_library_path": "./libcallpass.so",
@@ -11,6 +12,8 @@ settings = {
     "original_cxx": "/usr/bin/c++",
     "targeted_cxx": "/usr/bin/clang++"
 }
+
+iolock = Lock()
 
 def init():
   try:
@@ -29,15 +32,21 @@ def GET(name):
 class Console():
   @staticmethod
   def info(*st):
+    iolock.acquire()
     print(colored("[INFO]", "blue"), *st)
+    iolock.release()
 
   @staticmethod
   def warn(*st):
-    print(colored("[WARn]", "yellow"), *st)
+    iolock.acquire()
+    print(colored("[WARN]", "yellow"), *st)
+    iolock.release()
 
   @staticmethod
   def error(*st):
-    print(colored("[INFO]", "red"), *st)
+    iolock.acquire()
+    print(colored("[ERRR]", "red"), *st)
+    iolock.release()
 
   @staticmethod
   def log(*st):
@@ -46,7 +55,9 @@ class Console():
   @staticmethod
   def debug(*st):
     if GET("debug"):
-      print("[DEBUG]", *st)
+      iolock.acquire()
+      print("[DEBG]", *st)
+      iolock.release()
 
 
 def checkDir(subdir, name):

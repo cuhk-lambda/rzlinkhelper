@@ -2,8 +2,28 @@ import subprocess
 import sys
 import utils
 import os
+from multiprocessing import Pool
 
 console = utils.Console()
+
+
+def single_compile(cmd, filepath, r, totalLength):
+  execname = utils.findName(filepath)
+  if (os.access(filepath, os.R_OK)):
+    console.info(
+        "Found {}m, skipping. [{}/{}]".format(execname, r+1, totalLength))
+    return True
+  else:
+    console.info("Compiling {} [{}/{}]".format(execname, r+1, totalLength))
+    console.debug(cmd)
+  try:
+    subprocess.run(cmd, shell=True,
+                   stdout=subprocess.PIPE, check=True)
+  except subprocess.CalledProcessError:
+    console.error("Error compiling {}".format(execname))
+    sys.exit(2)
+    return False
+  return True
 
 
 def do_process(data):
@@ -14,6 +34,7 @@ def do_process(data):
 
   totalLength = len(data["compile"])
   finalDepList = []
+  compileTaskPool = Pool()
   console.log("Compiling .o (total: {})".format(totalLength))
   for r in range(totalLength):
     i = data["compile"][r]
@@ -24,28 +45,20 @@ def do_process(data):
         cmdline[argnum] = utils.GET("targeted_cxx")
         cmdline.insert(argnum+1, "-emit-llvm")
       elif cmdline[argnum] == "-o":
-        filename = os.path.abspath(utils.GET("object_dir") +
+        filepath = os.path.abspath(utils.GET("object_dir") +
                                    "/" + cmdline[argnum+1].split("/")[-1])
-        cmdline[argnum+1] = filename
-        execname = cmdline[argnum+1].split("/")[-1]
+        cmdline[argnum+1] = filepath
+        execname = utils.findName(filepath)
       elif cmdline[argnum] == "-c":
         cmdline[argnum] = "-S"
     command = " ".join(cmdline)
-    console.info("Compiling {} [{}/{}]".format(execname, r+1, totalLength))
+    compileTaskPool.apply_async(
+        single_compile, args=(command, filepath, r, totalLength), error_callback=console.error)
     finalDepList.append(execname)
-    if (os.access(filename, os.R_OK)):
-      console.info("File exists. Skipping.")
-      continue
-    console.debug(command)
-    try:
-      subprocess.run(command, shell=True,
-                     stdout=subprocess.PIPE, check=True)
-    except subprocess.CalledProcessError:
-      console.error("Error compiling {}".format(execname))
-      sys.exit(2)
+  compileTaskPool.close()
+  compileTaskPool.join()
 
   # Construct the graph
-
   console.info("Linking files")
   graphData = data["scripts"]
   linkStack = utils.Stack()
