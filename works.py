@@ -100,12 +100,15 @@ def do_process(data):
       cmdline = utils.getllvmLinkCmd(top, deps, utils.GET("object_dir"))
       console.debug(cmdline)
       console.info("Linking " + top)
-      try:
-        subprocess.run(cmdline, shell=True,
-                       stdout=subprocess.PIPE, check=True)
-      except subprocess.CalledProcessError:
-        console.error("Error linking {}".format(top))
-        sys.exit(2)
+      if (os.access(utils.GET("object_dir") + "/" + utils.findName(top), os.R_OK)):
+        console.info("{} found. Skipping".format(top))
+      else:
+        try:
+          subprocess.run(cmdline, shell=True,
+                         stdout=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError:
+          console.error("Error linking {}".format(top))
+          sys.exit(2)
       finalDepList.append(top)
       linkStack.pop()
   console.info("Finished.")
