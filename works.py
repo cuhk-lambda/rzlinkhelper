@@ -77,6 +77,7 @@ def do_process(data):
 
   while not linkStack.empty():
     top = linkStack.top()
+    console.debug("Analyzing {} [depth={}]".format(top, linkStack.size()))
     if top in finalDepList:
       linkStack.pop()
       continue
@@ -84,6 +85,9 @@ def do_process(data):
     final = True
     for i in deps:
       if i not in finalDepList:
+        if i == top:
+          console.error("Self-circle for {} found. Exiting.".format(i))
+          sys.exit(255)
         final = False
         linkStack.push(i)
     if final:
