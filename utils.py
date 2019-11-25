@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from termcolor import colored
 
 settings = {
     "callpass_library_path": "./libcallpass.so",
@@ -11,13 +12,13 @@ settings = {
     "targeted_cxx": "/usr/bin/clang++"
 }
 
-try:
-  custSettings = json.load(open("settings.json"))
-  for i in custSettings.items():
-    settings[i[0]] = i[1]
-except:
-  pass
-
+def init():
+  try:
+    custSettings = json.load(open("settings.json"))
+    for i in custSettings.items():
+      settings[i[0]] = i[1]
+  except:
+    pass
 
 def GET(name):
   if name in settings:
@@ -28,15 +29,15 @@ def GET(name):
 class Console():
   @staticmethod
   def info(*st):
-    print("[INFO]", *st)
+    print(colored("[INFO]", "blue"), *st)
 
   @staticmethod
   def warn(*st):
-    print("[WARN]", *st)
+    print(colored("[WARn]", "yellow"), *st)
 
   @staticmethod
   def error(*st):
-    print("[ERRR]", *st)
+    print(colored("[INFO]", "red"), *st)
 
   @staticmethod
   def log(*st):

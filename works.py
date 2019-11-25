@@ -15,7 +15,7 @@ def do_process(data):
   totalLength = len(data["compile"])
   finalDepList = []
   console.log("Compiling .o (total: {})".format(totalLength))
-  for r in range(data["compile"]):
+  for r in range(totalLength):
     i = data["compile"][r]
     execname = "(unknown)"
     cmdline = list(filter(lambda x: x != "", i.split(" ")))
