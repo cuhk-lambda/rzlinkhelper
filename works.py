@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import utils
+import os
 
 console = utils.Console()
 
@@ -9,18 +10,20 @@ def do_process(data):
   # Preparing directories
   utils.checkDir(utils.GET("object_dir"), "Object")
   utils.checkDir(utils.GET("target_dir"), "Target")
+  originalCXX = utils.GET("original_cxx")
 
   finalDepList = []
   console.log("Compiling .o (total: {})".format(len(data["compile"])))
   for i in data["compile"]:
     execname = "(unknown)"
     cmdline = list(filter(lambda x: x != "", i.split(" ")))
-    cmdline[0] = "/usr/bin/clang++"
     cmdline.insert(1, "-emit-llvm")
-    for argnum in range(2, len(cmdline)):
-      if cmdline[argnum] == "-o":
-        cmdline[argnum+1] = utils.GET("object_dir") + \
-            "/" + cmdline[argnum+1].split("/")[-1]
+    for argnum in range(len(cmdline)):
+      if cmdline[argnum] == originalCXX:
+        cmdline[argnum] = utils.GET("targeted_cxx")
+      elif cmdline[argnum] == "-o":
+        cmdline[argnum+1] = os.path.abspath(utils.GET("object_dir") +
+                                            "/" + cmdline[argnum+1].split("/")[-1])
         execname = cmdline[argnum+1].split("/")[-1]
       elif cmdline[argnum] == "-c":
         cmdline[argnum] = "-S"
