@@ -12,9 +12,11 @@ def do_process(data):
   utils.checkDir(utils.GET("target_dir"), "Target")
   originalCXX = utils.GET("original_cxx")
 
+  totalLength = len(data["compile"])
   finalDepList = []
-  console.log("Compiling .o (total: {})".format(len(data["compile"])))
-  for i in data["compile"]:
+  console.log("Compiling .o (total: {})".format(totalLength))
+  for r in range(data["compile"]):
+    i = data["compile"][r]
     execname = "(unknown)"
     cmdline = list(filter(lambda x: x != "", i.split(" ")))
     for argnum in range(len(cmdline)):
@@ -29,7 +31,7 @@ def do_process(data):
         cmdline[argnum] = "-S"
     command = " ".join(cmdline)
     console.debug(command)
-    console.info("Compiling {}".format(execname))
+    console.info("Compiling {} [{}/{}]".format(execname, r+1, totalLength))
     finalDepList.append(execname)
     try:
       subprocess.run(command, shell=True,
