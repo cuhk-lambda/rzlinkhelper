@@ -33,14 +33,11 @@ All configurations are defined in `settings.json`.
     "object_dir": "objects",
     "target_dir": "targets",
     "debug": true,
-    "original_cxx": "/usr/bin/c++",
-    "targeted_cxx": "/usr/bin/clang++"
+    "original_cxx_executable": "/usr/bin/c++",
+    "original_cc_executable": "/usr/bin/cc",
+    "targeted_cxx_executable": "/usr/bin/clang++",
+    "targeted_cc_executable": "/usr/bin/clang-8",
+    "llvm_link_executable": "/usr/bin/llvm-link"
 }
-```
 
-* `callpass_library_path`: Callpass library path.
-* `object_dir`: Directory where objects (.a, .o, .so) are generated.
-* `target_dir`: Directory where call statistics are generated.
-* `debug`: Debug mode which is more verbose.
-* `original_cxx`: The original compiler executable path
-* `targeted_cxx`: The clang++ executable path
+```

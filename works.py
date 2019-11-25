@@ -30,7 +30,8 @@ def do_process(data):
   # Preparing directories
   utils.checkDir(utils.GET("object_dir"), "Object")
   utils.checkDir(utils.GET("target_dir"), "Target")
-  originalCXX = utils.GET("original_cxx")
+  originalCXX = utils.GET("original_cxx_executable")
+  originalCC = utils.GET("original_cc_executable")
 
   totalLength = len(data["compile"])
   finalDepList = []
@@ -42,8 +43,11 @@ def do_process(data):
     cmdline = list(filter(lambda x: x != "", i.split(" ")))
     for argnum in range(len(cmdline)):
       if cmdline[argnum] == originalCXX:
-        cmdline[argnum] = utils.GET("targeted_cxx")
-        cmdline.insert(argnum+1, "-emit-llvm")
+        cmdline[argnum] = utils.GET("targeted_cxx_executable")
+        cmdline[argnum] += " -emit-llvm"
+      elif cmdline[argnum] == originalCC:
+        cmdline[argnum] = utils.GET("targeted_cc_executable")
+        cmdline[argnum] += " -emit-llvm"
       elif cmdline[argnum] == "-o":
         filepath = os.path.abspath(utils.GET("object_dir") +
                                    "/" + cmdline[argnum+1].split("/")[-1])
@@ -51,6 +55,8 @@ def do_process(data):
         execname = utils.findName(filepath)
       elif cmdline[argnum] == "-c":
         cmdline[argnum] = "-S"
+      elif cmdline[argnum] == "-g":
+        cmdline[argnum] = ""
     command = " ".join(cmdline)
     compileTaskPool.apply_async(
         single_compile, args=(command, filepath, r, totalLength), error_callback=console.error)

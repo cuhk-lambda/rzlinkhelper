@@ -3,6 +3,9 @@
     "object_dir": "objects",
     "target_dir": "targets",
     "debug": true,
-    "original_cxx": "/usr/bin/c++",
-    "targeted_cxx": "/usr/bin/clang++"
+    "original_cxx_executable": "/usr/bin/c++",
+    "original_cc_executable": "/usr/bin/cc",
+    "targeted_cxx_executable": "/usr/bin/clang++",
+    "targeted_cc_executable": "/usr/bin/clang-8",
+    "llvm_link_executable": "/usr/bin/llvm-link"
 }

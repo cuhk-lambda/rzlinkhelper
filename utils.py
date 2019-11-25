@@ -9,8 +9,9 @@ settings = {
     "object_dir": "objects",
     "target_dir": "targets",
     "debug": True,
-    "original_cxx": "/usr/bin/c++",
-    "targeted_cxx": "/usr/bin/clang++"
+    "original_cxx_executable": "/usr/bin/c++",
+    "targeted_cxx_executable": "/usr/bin/clang++",
+    "llvm_link_executable": "/usr/bin/llvm-link-8"
 }
 
 iolock = Lock()
@@ -31,21 +32,21 @@ def GET(name):
 class Console():
   @staticmethod
   def info(*st):
-    iolock.acquire()
+   iolock.acquire()
     print(colored("[INFO]", "blue"), *st)
-    iolock.release()
+   iolock.release()
 
   @staticmethod
   def warn(*st):
-    iolock.acquire()
+   iolock.acquire()
     print(colored("[WARN]", "yellow"), *st)
-    iolock.release()
+   iolock.release()
 
   @staticmethod
   def error(*st):
-    iolock.acquire()
+   iolock.acquire()
     print(colored("[ERRR]", "red"), *st)
-    iolock.release()
+   iolock.release()
 
   @staticmethod
   def log(*st):
@@ -54,9 +55,9 @@ class Console():
   @staticmethod
   def debug(*st):
     if GET("debug"):
-      iolock.acquire()
+     iolock.acquire()
       print("[DEBG]", *st)
-      iolock.release()
+     iolock.release()
 
 
 def checkDir(subdir, name):
@@ -124,4 +125,4 @@ def pathToValidNames(path):
 
 
 def getllvmLinkCmd(fpath, deps, dstdir):
-  return "llvm-link " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + dstdir + "/" + findName(fpath)
+  return GET("llvm_link_executable") + " " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + dstdir + "/" + findName(fpath)
