@@ -24,15 +24,19 @@ def do_process(data):
         cmdline[argnum] = utils.GET("targeted_cxx")
         cmdline.insert(argnum+1, "-emit-llvm")
       elif cmdline[argnum] == "-o":
-        cmdline[argnum+1] = os.path.abspath(utils.GET("object_dir") +
-                                            "/" + cmdline[argnum+1].split("/")[-1])
+        filename = os.path.abspath(utils.GET("object_dir") +
+                                   "/" + cmdline[argnum+1].split("/")[-1])
+        cmdline[argnum+1] = filename
         execname = cmdline[argnum+1].split("/")[-1]
       elif cmdline[argnum] == "-c":
         cmdline[argnum] = "-S"
     command = " ".join(cmdline)
-    console.debug(command)
     console.info("Compiling {} [{}/{}]".format(execname, r+1, totalLength))
     finalDepList.append(execname)
+    if (os.access(filename, os.R_OK)):
+      console.info("File exists. Skipping.")
+      continue
+    console.debug(command)
     try:
       subprocess.run(command, shell=True,
                      stdout=subprocess.PIPE, check=True)
