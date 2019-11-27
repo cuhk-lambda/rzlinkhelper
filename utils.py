@@ -10,11 +10,14 @@ settings = {
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
     "target_dir": "targets",
-    "debug": True,
+    "debug": true,
     "original_cxx_executable": "/usr/bin/c++",
+    "original_cc_executable": "/usr/bin/cc",
     "targeted_cxx_executable": "/usr/bin/clang++",
+    "targeted_cc_executable": "/usr/bin/clang",
     "llvm_link_executable": "/usr/bin/llvm-link"
 }
+
 
 iolock = Lock()
 

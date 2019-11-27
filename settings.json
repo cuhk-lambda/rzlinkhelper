@@ -6,6 +6,6 @@
     "original_cxx_executable": "/usr/bin/c++",
     "original_cc_executable": "/usr/bin/cc",
     "targeted_cxx_executable": "/usr/bin/clang++",
-    "targeted_cc_executable": "/usr/bin/clang-8",
+    "targeted_cc_executable": "/usr/bin/clang",
     "llvm_link_executable": "/usr/bin/llvm-link"
 }
