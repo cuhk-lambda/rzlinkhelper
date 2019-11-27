@@ -6,10 +6,11 @@ from multiprocessing import Pool
 
 console = utils.Console()
 
+sha1Table = {}
 
-def single_compile(cmd, filepath, r, totalLength):
-  execname = utils.findName(filepath)
-  if (os.access(filepath, os.R_OK)):
+
+def single_compile(cmd, hashname, execname, r, totalLength):
+  if (os.access(utils.GET("object_dir") + "/" + hashname, os.R_OK)):
     console.info(
         "Found {}m, skipping. [{}/{}]".format(execname, r+1, totalLength))
     return True
@@ -49,9 +50,10 @@ def do_process(data):
         cmdline[argnum] = utils.GET("targeted_cc_executable")
         cmdline[argnum] += " -emit-llvm"
       elif cmdline[argnum] == "-o":
-        filepath = os.path.abspath(utils.GET("object_dir") +
-                                   "/" + cmdline[argnum+1].split("/")[-1])
-        cmdline[argnum+1] = filepath
+        filepath = os.path.realpath(cmdline[argnum+1])
+        filehashpath = utils.sha1sum(filepath)
+        sha1Table[filehashpath] = filepath
+        cmdline[argnum+1] = utils.GET("object_dir") + "/" + filehashpath
         execname = utils.findName(filepath)
       elif cmdline[argnum] == "-c":
         cmdline[argnum] = "-S"
@@ -59,8 +61,8 @@ def do_process(data):
         cmdline[argnum] = ""
     command = " ".join(cmdline)
     compileTaskPool.apply_async(
-        single_compile, args=(command, filepath, r, totalLength), error_callback=console.error)
-    finalDepList.append(execname)
+        single_compile, args=(command, filehashpath, execname, r, totalLength), error_callback=console.error)
+    finalDepList.append(filehashpath)
   compileTaskPool.close()
   compileTaskPool.join()
 
@@ -71,19 +73,23 @@ def do_process(data):
   dependencyList = {}
   for i in graphData:
     # Initial data
-    itemName = i["target"]["name"]
+    itemPath = i["target"]["abs_path"]
+    hashedItemPath = utils.sha1sum(itemPath)
+    sha1Table[hashedItemPath] = itemPath
     itemDependencies = i["target"]["dependencies"]
     itemType = i["target"]["target_type"]
-    dependencyList[itemName] = {
-        "name": itemName,
-        "dependencies": utils.pathToValidNames(itemDependencies),
+    dependencyList[hashedItemPath] = {
+        "path": itemPath,
+        "hashed": hashedItemPath,
+        "dependencies": utils.pathToValidNames(itemDependencies, sha1Table),
         "type": itemType
     }
-    linkStack.push(itemName)
+    linkStack.push(hashedItemPath)
 
   while not linkStack.empty():
     top = linkStack.top()
-    console.debug("Analyzing {} [depth={}]".format(top, linkStack.size()))
+    console.debug("Analyzing {} ({}) [depth={}]".format(
+        sha1Table[top], top, linkStack.size()))
     if top in finalDepList:
       linkStack.pop()
       continue
@@ -92,7 +98,8 @@ def do_process(data):
     for i in deps:
       if i not in finalDepList:
         if i == top:
-          console.error("Self-circle for {} found. Exiting.".format(i))
+          console.error(
+              "Self-circle for {} ({}) found. Exiting.".format(sha1Table[i], i))
           sys.exit(255)
         final = False
         linkStack.push(i)
@@ -100,7 +107,7 @@ def do_process(data):
       cmdline = utils.getllvmLinkCmd(top, deps, utils.GET("object_dir"))
       console.debug(cmdline)
       console.info("Linking " + top)
-      if (os.access(utils.GET("object_dir") + "/" + utils.findName(top), os.R_OK)):
+      if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
         console.info("{} found. Skipping".format(top))
       else:
         try:

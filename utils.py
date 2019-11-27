@@ -3,6 +3,7 @@ import os
 import sys
 from termcolor import colored
 from multiprocessing import Lock
+from hashlib import sha1
 
 settings = {
     "callpass_library_path": "./libcallpass.so",
@@ -11,7 +12,7 @@ settings = {
     "debug": True,
     "original_cxx_executable": "/usr/bin/c++",
     "targeted_cxx_executable": "/usr/bin/clang++",
-    "llvm_link_executable": "/usr/bin/llvm-link-8"
+    "llvm_link_executable": "/usr/bin/llvm-link"
 }
 
 iolock = Lock()
@@ -115,15 +116,21 @@ def findNames(path):
   return list(map(findName, path))
 
 
-def pathToValidNames(path):
+def pathToValidNames(path, table):
   names = []
   for i in path:
     if i[-2:] == ".a" or \
        i[-2:] == ".o" or \
        i[-3:] == ".so":
-      names.append(findName(i))
+      hashName = sha1sum(i)
+      table[hashName] = i
+      names.append(hashName)
   return names
 
 
-def getllvmLinkCmd(fpath, deps, dstdir):
-  return GET("llvm_link_executable") + " " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + dstdir + "/" + findName(fpath)
+def getllvmLinkCmd(fhash, deps, dstdir):
+  return GET("llvm_link_executable") + " " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + dstdir + "/" + fhash
+
+
+def sha1sum(text):
+  return sha1(text.encode()).hexdigest()
