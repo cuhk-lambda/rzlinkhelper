@@ -89,29 +89,6 @@ def hasNoIndirectDependcies(deps):
   return True
 
 
-class Stack():
-  def __init__(self):
-    self.items = []
-
-  def push(self, obj):
-    self.items.append(obj)
-
-  def top(self):
-    if (len(self.items) > 0):
-      return self.items[-1]
-    return None
-
-  def pop(self):
-    if (len(self.items) > 0):
-      del self.items[-1]
-
-  def size(self):
-    return len(self.items)
-
-  def empty(self):
-    return self.size() == 0
-
-
 def findName(path):
   return path.split("/")[-1]
 
@@ -132,12 +109,13 @@ def pathToValidNames(path, table):
   return names
 
 
-def getllvmLinkCmd(fhash, deps, dstdir):
-  return GET("llvm_link_executable") + " " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + realpath(dstdir + "/" + fhash)
+def getllvmLinkCmd(destPath, deps):
+  return GET("llvm_link_executable") + " " + " ".join(deps) + " -S -o " + destPath
 
 
 def sha1sum(text):
   return sha1(text.encode()).hexdigest()
+
 
 def deduplicate(items):
   ret = []
@@ -145,6 +123,7 @@ def deduplicate(items):
     if i not in ret:
       ret.append(i)
   return ret
+
 
 def hasNoDependency(fullpath):
   return fullpath[-2:] == ".o"

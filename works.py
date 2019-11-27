@@ -2,18 +2,27 @@ import subprocess
 import sys
 import utils
 import os
-from multiprocessing import Pool
+from multiprocessing import Pool, Lock, Queue
 from os.path import realpath
+from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 
 console = utils.Console()
 
 sha1Table = {}
+lock_countEdit = defaultdict(Lock)
+globalStop = False
+dependencyList = {}
+dependentList = defaultdict(list)
+finalDepList = []
+linkingProcPool = ProcessPoolExecutor()
+linkingTaskQueue = Queue()
 
 
 def single_compile(cmd, hashname, execname, r, totalLength):
   if (os.access(utils.GET("object_dir") + "/" + hashname, os.R_OK)):
     console.info(
-        "Found {}m, skipping. [{}/{}]".format(execname, r+1, totalLength))
+        "Found {}, skipping. [{}/{}]".format(execname, r+1, totalLength))
     return True
   else:
     console.info("Compiling {} [{}/{}]".format(execname, r+1, totalLength))
@@ -28,6 +37,48 @@ def single_compile(cmd, hashname, execname, r, totalLength):
   return True
 
 
+def single_linking(top):
+  print(top)
+  if utils.hasNoDependency(sha1Table[top]):
+    console.debug(
+        "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
+  else:
+    console.debug(
+        "{} ({}) has some dependencies.".format(sha1Table[top], top))
+    deps = dependencyList[top]["dependencies"]
+    cmdline = utils.getllvmLinkCmd(
+        realpath(utils.GET("object_dir") + "/" + top), list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
+    console.debug(cmdline)
+    console.info("Linking " + top)
+    if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
+      console.info("{} found. Skipping".format(top))
+    else:
+      try:
+        subprocess.run(cmdline, shell=True,
+                       stdout=subprocess.PIPE, check=True)
+      except subprocess.CalledProcessError:
+        console.error("Error linking {}".format(top))
+        console.error("Related dependcies:")
+        for i in deps:
+          console.error("{} ({})".format(sha1Table[i], i))
+          console.error("cmdline by original filenames: ",
+                        utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
+                                             list(map(lambda x: sha1Table[x], deps))))
+        sys.exit(2)
+        return False
+  finalDepList.append(top)
+  for i in dependentList[top]:
+    lock_countEdit[i].acquire()
+    dependencyList[i]["pendingDepCount"] -= 1
+    print(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
+        map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
+    lock_countEdit[i].release()
+    if dependencyList[i]["pendingDepCount"] <= 1:
+      print("Pushing", i)
+      linkingTaskQueue.put(i)
+  return True
+
+
 def do_process(data):
   # Preparing directories
   utils.checkDir(utils.GET("object_dir"), "Object")
@@ -36,7 +87,6 @@ def do_process(data):
   originalCC = utils.GET("original_cc_executable")
 
   totalLength = len(data["compile"])
-  finalDepList = []
   compileTaskPool = Pool()
   console.log("Compiling .o (total: {})".format(totalLength))
   for r in range(totalLength):
@@ -71,8 +121,11 @@ def do_process(data):
   # Construct the graph
   console.info("Linking files")
   graphData = data["scripts"]
-  linkStack = utils.Stack()
-  dependencyList = {}
+
+  asPath = set()
+  for i in graphData:
+    asPath.add(utils.sha1sum(i["target"]["abs_path"]))
+
   for i in graphData:
     # Initial data
     itemPath = i["target"]["abs_path"]
@@ -86,48 +139,33 @@ def do_process(data):
         "dependencies": utils.deduplicate(utils.pathToValidNames(itemDependencies, sha1Table)),
         "type": itemType
     }
-    linkStack.push(hashedItemPath)
+    dependencyList[hashedItemPath]["pendingDepCount"] = 0
+    for j in dependencyList[hashedItemPath]["dependencies"]:
+      if j in asPath:
+        dependencyList[hashedItemPath]["pendingDepCount"] += 1
+      dependentList[j].append(hashedItemPath)
 
-  while not linkStack.empty():
-    top = linkStack.top()
-    console.debug("Analyzing {} ({}) [depth={}]".format(
-        sha1Table[top], top, linkStack.size()))
-    if top in finalDepList:
-      linkStack.pop()
-      continue
-    if utils.hasNoDependency(sha1Table[top]):
-      console.debug("{} has no dependency. Skipping.".format(sha1Table[top]))
-      finalDepList.append(top)
-      linkStack.pop()
-      continue
-    deps = dependencyList[top]["dependencies"]
-    final = True
-    for i in deps:
-      if i not in finalDepList:
-        if i == top:
-          console.error(
-              "Self-circle for {} ({}) found. Exiting.".format(sha1Table[i], i))
-          sys.exit(255)
-        final = False
-        linkStack.push(i)
-    if final:
-      cmdline = utils.getllvmLinkCmd(top, deps, utils.GET("object_dir"))
-      console.debug(cmdline)
-      console.info("Linking " + top)
-      if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
-        console.info("{} found. Skipping".format(top))
-      else:
-        try:
-          subprocess.run(cmdline, shell=True,
-                         stdout=subprocess.PIPE, check=True)
-        except subprocess.CalledProcessError:
-          console.error("Error linking {}".format(top))
-          console.error("Related dependcies:")
-          for i in deps:
-            console.error("{} ({})".format(sha1Table[i], i))
-            console.error("cmdline by original filenames: ",
-                          utils.getllvmLinkCmd(sha1Table[top], list(map(lambda x: sha1Table[x], deps)), utils.GET("object_dir")))
-          sys.exit(2)
-      finalDepList.append(top)
-      linkStack.pop()
+  for i in finalDepList:
+    for j in dependentList[i]:
+      print(j, sha1Table[j])
+      # dependencyList[j]["pendingDepCount"] -= 1
+      print(j, "depcnt: ", dependencyList[j]["pendingDepCount"], list(
+          map(lambda x: sha1Table[x], dependencyList[j]["dependencies"])))
+      if dependencyList[j]["pendingDepCount"] <= 1:
+        print("Pushing", j)
+        linkingTaskQueue.put(j)
+
+  # print(dependencyList)
+  # print(dependentList)
+
+  ctr = len(graphData)
+  while ctr > 0:
+    p = Pool(1)
+    while not linkingTaskQueue.empty():
+      top = linkingTaskQueue.get()
+      ctr -= 1
+      p.apply_async(single_linking, args=(top,), error_callback=console.error)
+    p.close()
+    p.join()
+
   console.info("Finished.")
