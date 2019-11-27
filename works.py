@@ -117,6 +117,11 @@ def do_process(data):
                          stdout=subprocess.PIPE, check=True)
         except subprocess.CalledProcessError:
           console.error("Error linking {}".format(top))
+          console.error("Related dependcies:")
+          for i in deps:
+            console.error("{} ({})".format(sha1Table[i], i))
+            console.error("cmdline by original filenames: ",
+                          utils.getllvmLinkCmd(sha1Table[top], list(map(lambda x: sha1Table[x], deps)), utils.GET("object_dir")))
           sys.exit(2)
       finalDepList.append(top)
       linkStack.pop()
