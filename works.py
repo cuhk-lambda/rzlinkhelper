@@ -95,6 +95,10 @@ def do_process(data):
     if top in finalDepList:
       linkStack.pop()
       continue
+    if utils.hasNoDependency(sha1Table[top]):
+      console.debug("{} has no dependency. Skipping.".format(sha1Table[top]))
+      finalDepList.append(top)
+      linkStack.pop()
     deps = dependencyList[top]["dependencies"]
     final = True
     for i in deps:

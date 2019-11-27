@@ -145,3 +145,6 @@ def deduplicate(items):
     if i not in ret:
       ret.append(i)
   return ret
+
+def hasNoDependency(fullpath):
+  return fullpath[-2:] == ".o"
