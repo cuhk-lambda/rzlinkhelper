@@ -3,6 +3,7 @@ import sys
 import utils
 import os
 from multiprocessing import Pool
+from os.path import realpath
 
 console = utils.Console()
 
@@ -50,10 +51,11 @@ def do_process(data):
         cmdline[argnum] = utils.GET("targeted_cc_executable")
         cmdline[argnum] += " -emit-llvm"
       elif cmdline[argnum] == "-o":
-        filepath = os.path.realpath(cmdline[argnum+1])
+        filepath = realpath(cmdline[argnum+1])
         filehashpath = utils.sha1sum(filepath)
         sha1Table[filehashpath] = filepath
-        cmdline[argnum+1] = utils.GET("object_dir") + "/" + filehashpath
+        cmdline[argnum +
+                1] = realpath(utils.GET("object_dir") + "/" + filehashpath)
         execname = utils.findName(filepath)
       elif cmdline[argnum] == "-c":
         cmdline[argnum] = "-S"

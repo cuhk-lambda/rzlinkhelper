@@ -4,6 +4,7 @@ import sys
 from termcolor import colored
 from multiprocessing import Lock
 from hashlib import sha1
+from os.path import realpath
 
 settings = {
     "callpass_library_path": "./libcallpass.so",
@@ -129,7 +130,7 @@ def pathToValidNames(path, table):
 
 
 def getllvmLinkCmd(fhash, deps, dstdir):
-  return GET("llvm_link_executable") + " " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + dstdir + "/" + fhash
+  return GET("llvm_link_executable") + " " + " ".join(list(map(lambda x: dstdir + "/" + x, deps))) + " -S -o " + realpath(dstdir + "/" + fhash)
 
 
 def sha1sum(text):
