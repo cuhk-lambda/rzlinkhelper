@@ -10,7 +10,7 @@ settings = {
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
     "target_dir": "targets",
-    "debug": true,
+    "debug": True,
     "original_cxx_executable": "/usr/bin/c++",
     "original_cc_executable": "/usr/bin/cc",
     "targeted_cxx_executable": "/usr/bin/clang++",
