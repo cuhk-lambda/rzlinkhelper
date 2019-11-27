@@ -99,6 +99,7 @@ def do_process(data):
       console.debug("{} has no dependency. Skipping.".format(sha1Table[top]))
       finalDepList.append(top)
       linkStack.pop()
+      continue
     deps = dependencyList[top]["dependencies"]
     final = True
     for i in deps:
