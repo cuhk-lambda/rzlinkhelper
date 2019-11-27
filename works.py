@@ -83,7 +83,7 @@ def do_process(data):
     dependencyList[hashedItemPath] = {
         "path": itemPath,
         "hashed": hashedItemPath,
-        "dependencies": utils.pathToValidNames(itemDependencies, sha1Table),
+        "dependencies": utils.deduplicate(utils.pathToValidNames(itemDependencies, sha1Table)),
         "type": itemType
     }
     linkStack.push(hashedItemPath)

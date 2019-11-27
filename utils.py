@@ -138,3 +138,10 @@ def getllvmLinkCmd(fhash, deps, dstdir):
 
 def sha1sum(text):
   return sha1(text.encode()).hexdigest()
+
+def deduplicate(items):
+  ret = []
+  for i in items:
+    if i not in ret:
+      ret.append(i)
+  return ret
