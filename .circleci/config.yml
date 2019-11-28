@@ -9,9 +9,9 @@ jobs:
       - run:
           no_output_timeout: 3m
           command: |
-            apt update
-            apt install -y build-essential cmake make wget
-            pip3 install -r requirements.txt
+            sudo apt update
+            sudo apt install -y build-essential cmake make wget
+            pip3 install -r requirements.txt --user
       - run:
           no_output_timeout: 3m
           command: |
