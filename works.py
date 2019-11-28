@@ -160,7 +160,7 @@ def do_process(data):
 
   ctr = len(graphData)
   while ctr > 0:
-    p = Pool(1)
+    p = Pool(None)
     while not linkingTaskQueue.empty():
       top = linkingTaskQueue.get()
       ctr -= 1
