@@ -3,14 +3,14 @@ version: 2
 jobs:
   build:
     docker:
-      - image: ubuntu:18.04
+      - image: circleci/python:3.8
     steps:
       - checkout
       - run:
           no_output_timeout: 3m
           command: |
             apt update
-            apt install -y build-essential cmake make python3 wget
+            apt install -y build-essential cmake make wget
             pip3 install -r requirements.txt
       - run:
           no_output_timeout: 3m
