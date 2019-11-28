@@ -1,4 +1,6 @@
 #!/bin/bash
+git submodule init
+git submodule update
 mkdir dist
 cd dist
 cmake ../repo
