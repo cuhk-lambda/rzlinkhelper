@@ -11,6 +11,7 @@ jobs:
           command: |
             apt update
             apt install -y build-essential cmake make python3 wget
+            pip3 install -r requirements.txt
       - run:
           no_output_timeout: 3m
           command: |
