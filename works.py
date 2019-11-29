@@ -135,7 +135,12 @@ def do_process(data):
         itemDependencies = i["target"]["dependencies"]
         dependencyList[hashedItemPath] = utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table))
 
-    currList = utils.topoSort(dependencyList, finalDepList)
+    try:
+        currList = utils.topoSort(dependencyList, finalDepList)
+    except ValueError:
+        console.error("Topo sort failed to complete. Please check your data.")
+        sys.exit(1)
+
     if len(currList) != len(graphData):
         console.warn("Bad consistance on linking recipe")
     console.debug("Linking sequence:", currList, "or", list(map(lambda x: sha1Table[x], currList)))

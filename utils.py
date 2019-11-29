@@ -9,7 +9,7 @@ from copy import deepcopy
 settings = {
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
-    "debug": False,
+    "debug": True,
     "original_cxx_executable": "/usr/bin/c++",
     "original_cc_executable": "/usr/bin/cc",
     "targeted_cxx_executable": "/usr/bin/clang++",
@@ -142,6 +142,8 @@ def topoSort(targets, excludes):
                 seq.append(i)
                 removePending.append(i)
                 del dup[i]
+        if len(removePending) == 0:
+            raise ValueError
         for idx, key in enumerate(dup):
             dup[key] = [r for r in dup[key] if r not in removePending]
     return seq
