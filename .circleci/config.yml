@@ -10,7 +10,7 @@ jobs:
           no_output_timeout: 3m
           command: |
             sudo apt update
-            sudo apt install -y build-essential cmake remake wget clang
+            sudo apt install -y build-essential cmake remake curl clang jq
             pip3 install -r requirements.txt --user
       - run:
           no_output_timeout: 3m
