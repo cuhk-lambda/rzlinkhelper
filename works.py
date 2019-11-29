@@ -72,7 +72,7 @@ def single_linking(top):
         # console.debug(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
         #     map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
         lock_countEdit[i].release()
-        if dependencyList[i]["pendingDepCount"] <= 1:
+        if dependencyList[i]["pendingDepCount"] == 0:
             console.debug("Pushing {} ({}) into linking queue".format(sha1Table[i], i))
             linkingTaskQueue.put(i)
     return True
@@ -157,7 +157,7 @@ def do_process(data):
             # dependencyList[j]["pendingDepCount"] -= 1
             print(j, "depcnt: ", dependencyList[j]["pendingDepCount"], list(
                 map(lambda x: sha1Table[x], dependencyList[j]["dependencies"])))
-            if dependencyList[j]["pendingDepCount"] <= 1:
+            if dependencyList[j]["pendingDepCount"] == 0:
                 print("Pushing", j)
                 linkingTaskQueue.put(j)
 
