@@ -127,3 +127,10 @@ def deduplicate(items):
 
 def hasNoDependency(fullpath):
     return fullpath[-2:] == ".o"
+
+
+def checkItemInChain(item, chain, deps):
+    for i in deps[item]:
+        if i in chain:
+            chain.append(i)
+            checkItemInChain(i, chain, deps)

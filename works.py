@@ -142,19 +142,25 @@ def do_process(data):
         itemDependencies = i["target"]["dependencies"]
         dependencyList[hashedItemPath] = utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table))
 
+    #  generate later <-- generate first
+    #  cL[0]  cL[1]   ...  cl[n] cl[n+1] ...
+
     currList = []
-
     for i in dependencyList.keys():
-        for j in dependencyList[i]:
-            if j in currList:
-                currList.append(j)
         currList.append(i)
+        utils.checkItemInChain(i, currList, dependencyList)
 
+    realList = []
+    for i in reversed(currList):
+        if i not in realList:
+            realList.append(i)
+
+    console.debug("Linking sequence:", realList)
     doneList = set()
     ctrLen = len(currList)
     print("Build sequence:", list(map(lambda x: sha1Table[x], currList)))
     p = Pool()
-    for idx, obj in enumerate(currList):
+    for idx, obj in enumerate(realList):
         if obj in doneList:
             continue
         doneList.add(obj)
