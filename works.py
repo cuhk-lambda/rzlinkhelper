@@ -34,6 +34,9 @@ def single_linking(top):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
     else:
+        if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
+            console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
+            return True
         deps = dependencyList[top]
         cmdline = utils.getllvmLinkCmd(
             realpath(utils.GET("object_dir") + "/" + top), list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
@@ -47,22 +50,18 @@ def single_linking(top):
             if len(files) == 0:
                 break
         console.info("Linking {} ({})".format(sha1Table[top], top))
-        if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
-            console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
-        else:
-            console.debug("{} ({}) is not found. Linking.".format(sha1Table[top], top))
-            try:
-                subprocess.run(cmdline, shell=True,
-                               stdout=subprocess.PIPE, check=True)
-            except subprocess.CalledProcessError:
-                console.error("Error linking {} ({})".format(sha1Table[top], top))
-                console.error("Related dependcies:")
-                for i in deps:
-                    console.error("{} ({})".format(sha1Table[i], i))
-                    console.error("cmdline by original filenames: ",
-                                  utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
-                                                       list(map(lambda x: sha1Table[x], deps))))
-                return False
+        try:
+            subprocess.run(cmdline, shell=True,
+                           stdout=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError:
+            console.error("Error linking {} ({})".format(sha1Table[top], top))
+            console.error("Related dependencies:")
+            for i in deps:
+                console.error("{} ({})".format(sha1Table[i], i))
+                console.error("cmdline by original filenames: ",
+                              utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
+                                                   list(map(lambda x: sha1Table[x], deps))))
+            return False
     return True
 
 
@@ -159,11 +158,9 @@ def do_process(data):
         if obj in doneList:
             continue
         doneList.add(obj)
-        console.info("Link in progress: [{}/{}]".format(idx + 1, ctrLen))
-        p.apply_async(single_linking, args=(obj,), error_callback=console_error_and_exit())
+        console.info("Link in progress: [{}/{} steps]".format(idx + 1, ctrLen))
+        p.apply_async(single_linking, args=(obj,), error_callback=console_error_and_exit)
     p.close()
     p.join()
-
     console.success("All targets are linked.")
-
     console.success("Finished.")
