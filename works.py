@@ -154,13 +154,13 @@ def do_process(data):
     doneList = set()
     ctrLen = len(currList)
     print("Build sequence:", list(map(lambda x: sha1Table[x], currList)))
-    p = Pool(1)
+    p = Pool()
     for idx, obj in enumerate(currList):
         if obj in doneList:
             continue
         doneList.add(obj)
         console.info("Link in progress: [{}/{}]".format(idx + 1, ctrLen))
-        p.apply(single_linking, args=(obj,))
+        p.apply_async(single_linking, args=(obj,), error_callback=console_error_and_exit())
     p.close()
     p.join()
 
