@@ -38,7 +38,6 @@ def single_compile(cmd, hashname, execname, r, totalLength):
 
 
 def single_linking(top):
-    print(top)
     if utils.hasNoDependency(sha1Table[top]):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
@@ -66,16 +65,22 @@ def single_linking(top):
                                                        list(map(lambda x: sha1Table[x], deps))))
                 return False
     finalDepList.append(top)
+    updateDepQueue(top)
+    return True
+
+
+def updateDepQueue(top, asyncio=True):
     for i in dependentList[top]:
-        lock_countEdit[i].acquire()
+        if asyncio:
+            lock_countEdit[i].acquire()
         dependencyList[i]["pendingDepCount"] -= 1
-        # console.debug(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
-        #     map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
-        lock_countEdit[i].release()
+        console.debug(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
+            map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
+        if asyncio:
+            lock_countEdit[i].release()
         if dependencyList[i]["pendingDepCount"] == 0:
             console.debug("Pushing {} ({}) into linking queue".format(sha1Table[i], i))
             linkingTaskQueue.put(i)
-    return True
 
 
 def console_error_and_exit(st):
@@ -131,6 +136,8 @@ def do_process(data):
     asPath = set()
     for i in graphData:
         asPath.add(utils.sha1sum(i["target"]["abs_path"]))
+    for i in finalDepList:
+        asPath.add(i)
 
     for i in graphData:
         # Initial data
@@ -152,14 +159,7 @@ def do_process(data):
             dependentList[j].append(hashedItemPath)
 
     for i in finalDepList:
-        for j in dependentList[i]:
-            print(j, sha1Table[j])
-            # dependencyList[j]["pendingDepCount"] -= 1
-            print(j, "depcnt: ", dependencyList[j]["pendingDepCount"], list(
-                map(lambda x: sha1Table[x], dependencyList[j]["dependencies"])))
-            if dependencyList[j]["pendingDepCount"] == 0:
-                print("Pushing", j)
-                linkingTaskQueue.put(j)
+        updateDepQueue(i, asyncio=False)
 
     # print(dependencyList)
     # print(dependentList)

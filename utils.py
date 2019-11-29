@@ -59,6 +59,7 @@ class Console():
         with iolock:
             print(colored("[SUCC]", "green"), *st)
 
+    @staticmethod
     def debug(*st):
         if GET("debug"):
             with iolock:
