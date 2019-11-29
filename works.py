@@ -2,6 +2,7 @@ import subprocess
 import sys
 import utils
 import os
+import json
 from multiprocessing import Pool, Lock, Queue
 from os.path import realpath
 from collections import defaultdict
@@ -166,4 +167,18 @@ def do_process(data):
         p.close()
         p.join()
 
-    console.info("Finished.")
+    console.success("All targets are linked.")
+    console.info("Renaming")
+    preserveProcess = utils.GET("preserve_process")
+    for sha1str in os.listdir(utils.GET("object_dir")):
+        if sha1str in sha1Table:
+            os.rename(utils.GET("object_dir") + "/" + sha1str,
+                      utils.GET("object_dir") + "/" + utils.findName(sha1Table[sha1str]))
+    if preserveProcess != None and preserveProcess != "":
+        sha1FilePath = utils.GET("object_dir") + "/" + preserveProcess
+        try:
+            json.dump(sha1Table, open(utils.GET("object_dir") + "/" + preserveProcess, "w"))
+        except PermissionError:
+            console.warn("Process file {} is not writable, while preseve_process is on.".format(sha1FilePath))
+
+    console.success("Finished.")

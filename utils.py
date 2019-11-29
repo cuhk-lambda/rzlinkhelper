@@ -9,13 +9,13 @@ from os.path import realpath
 settings = {
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
-    "target_dir": "targets",
-    "debug": True,
+    "debug": False,
     "original_cxx_executable": "/usr/bin/c++",
     "original_cc_executable": "/usr/bin/cc",
     "targeted_cxx_executable": "/usr/bin/clang++",
     "targeted_cc_executable": "/usr/bin/clang",
-    "llvm_link_executable": "/usr/bin/llvm-link"
+    "llvm_link_executable": "/usr/bin/llvm-link",
+    "preserve_process": "sha1.json"
 }
 
 iolock = Lock()
@@ -55,6 +55,10 @@ class Console():
         Console.info(*st)
 
     @staticmethod
+    def success(*st):
+        with iolock:
+            print(colored("[SUCC]", "green"), *st)
+
     def debug(*st):
         if GET("debug"):
             with iolock:
