@@ -3,23 +3,13 @@ import sys
 import utils
 import os
 import json
-from multiprocessing import Pool, Lock, Queue
-from queue import Empty
+from multiprocessing import Pool
 from os.path import realpath
-from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
 
 console = utils.Console()
 
 sha1Table = {}
-lock_countEdit = defaultdict(Lock)
-globalStop = False
 dependencyList = {}
-dependentList = defaultdict(list)
-finalDepList = []
-finalDepListEditLock = Lock()
-linkingProcPool = ProcessPoolExecutor()
-linkingTaskQueue = Queue()
 
 
 def single_compile(cmd, hashname, execname, r, totalLength):
@@ -44,10 +34,18 @@ def single_linking(top):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
     else:
-        deps = dependencyList[top]["dependencies"]
+        deps = dependencyList[top]
         cmdline = utils.getllvmLinkCmd(
             realpath(utils.GET("object_dir") + "/" + top), list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
         console.debug(cmdline)
+        console.info("Waiting for prequisites of {} ({})...".format(sha1Table[top], top))
+        files = deps.copy()
+        while True:
+            for i in files:
+                if os.access(utils.GET("object_dir") + "/" + i, os.R_OK):
+                    files.remove(i)
+            if len(files) == 0:
+                break
         console.info("Linking {} ({})".format(sha1Table[top], top))
         if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
             console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
@@ -65,23 +63,7 @@ def single_linking(top):
                                   utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
                                                        list(map(lambda x: sha1Table[x], deps))))
                 return False
-    finalDepListEditLock.acquire()
-    finalDepList.append(top)
-    finalDepListEditLock.release()
-    updateDepQueue(top)
     return True
-
-
-def updateDepQueue(top, asyncio=True):
-    for i in dependentList[top]:
-        if asyncio:
-            lock_countEdit[i].acquire()
-        dependencyList[i]["pendingDepCount"] -= 1
-        if asyncio:
-            lock_countEdit[i].release()
-        if dependencyList[i]["pendingDepCount"] == 0:
-            console.debug("Pushing {} ({}) into linking queue".format(sha1Table[i], i))
-            linkingTaskQueue.put(i)
 
 
 def console_error_and_exit(st):
@@ -94,6 +76,8 @@ def do_process(data):
     utils.checkDir(utils.GET("object_dir"), "Object")
     originalCXX = utils.GET("original_cxx_executable")
     originalCC = utils.GET("original_cc_executable")
+
+    finalDepList = []
 
     totalLength = len(data["compile"])
     compileTaskPool = Pool()
@@ -131,6 +115,17 @@ def do_process(data):
 
     # Construct the graph
     console.success("All object files are compiled.")
+
+    preserveProcess = utils.GET("preserve_process")
+    if preserveProcess != None and preserveProcess != "":
+        console.info("Saving metadata")
+        sha1FilePath = utils.GET("object_dir") + "/" + preserveProcess
+        try:
+            json.dump(sha1Table, open(utils.GET("object_dir") + "/" + preserveProcess, "w"))
+            console.success("Metadata saved.")
+        except PermissionError:
+            console.warn("Process file {} is not writable, while preseve_process is on.".format(sha1FilePath))
+
     console.info("Linking files")
     graphData = data["scripts"]
 
@@ -146,53 +141,29 @@ def do_process(data):
         hashedItemPath = utils.sha1sum(itemPath)
         sha1Table[hashedItemPath] = itemPath
         itemDependencies = i["target"]["dependencies"]
-        itemType = i["target"]["target_type"]
-        dependencyList[hashedItemPath] = {
-            "path": itemPath,
-            "hashed": hashedItemPath,
-            "dependencies": utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table)),
-            "type": itemType
-        }
-        dependencyList[hashedItemPath]["pendingDepCount"] = 0
-        for j in dependencyList[hashedItemPath]["dependencies"]:
-            if j in asPath:
-                dependencyList[hashedItemPath]["pendingDepCount"] += 1
-            dependentList[j].append(hashedItemPath)
-        if dependencyList[hashedItemPath]["pendingDepCount"] == 0:
-            console.warn("Pushing {} ({}) unnaturally into linking queue".format(itemPath, hashedItemPath))
-            linkingTaskQueue.put(hashedItemPath)
+        dependencyList[hashedItemPath] = utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table))
 
-    for i in finalDepList:
-        updateDepQueue(i, asyncio=False)
+    currList = []
 
-    ctr = len(graphData)
-    ctrAll = ctr
-    p = Pool()
-    while ctr > 0:
-            top = None
-            try:
-             top = linkingTaskQueue.get_nowait()
-            except Empty:
-               for s in graphData:
-                 i = utils.sha1sum(s["target"]["abs_path"])
-                 if i not in finalDepList and dependencyList[i]["pendingDepCount"] == 0:
-                    console.debug("Successfully recovered from an empty queue")
-                    updateDepQueue(i)
-                    finalDepList.append(i)
-               continue
-            ctr -= 1
-            console.info("Link in progress: [{}/{}]".format(ctrAll - ctr, ctrAll))
-            p.apply_async(single_linking, args=(top,), error_callback=console_error_and_exit)
+    for i in dependencyList.keys():
+        for j in dependencyList[i]:
+            if j in currList:
+                currList.append(j)
+        currList.append(i)
+
+    doneList = set()
+    ctrLen = len(currList)
+    print("Build sequence:", list(map(lambda x: sha1Table[x], currList)))
+    p = Pool(1)
+    for idx, obj in enumerate(currList):
+        if obj in doneList:
+            continue
+        doneList.add(obj)
+        console.info("Link in progress: [{}/{}]".format(idx + 1, ctrLen))
+        p.apply(single_linking, args=(obj,))
     p.close()
     p.join()
 
     console.success("All targets are linked.")
-    preserveProcess = utils.GET("preserve_process")
-    if preserveProcess != None and preserveProcess != "":
-        sha1FilePath = utils.GET("object_dir") + "/" + preserveProcess
-        try:
-            json.dump(sha1Table, open(utils.GET("object_dir") + "/" + preserveProcess, "w"))
-        except PermissionError:
-            console.warn("Process file {} is not writable, while preseve_process is on.".format(sha1FilePath))
 
     console.success("Finished.")
