@@ -4,6 +4,7 @@ import utils
 import os
 import json
 from multiprocessing import Pool, Lock, Queue
+from queue import Empty
 from os.path import realpath
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -16,6 +17,7 @@ globalStop = False
 dependencyList = {}
 dependentList = defaultdict(list)
 finalDepList = []
+finalDepListEditLock = Lock()
 linkingProcPool = ProcessPoolExecutor()
 linkingTaskQueue = Queue()
 
@@ -42,16 +44,15 @@ def single_linking(top):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
     else:
-        console.debug(
-            "{} ({}) has some dependencies.".format(sha1Table[top], top))
         deps = dependencyList[top]["dependencies"]
         cmdline = utils.getllvmLinkCmd(
             realpath(utils.GET("object_dir") + "/" + top), list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
         console.debug(cmdline)
         console.info("Linking {} ({})".format(sha1Table[top], top))
         if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
-            console.info("{} is found. Skipping.".format(sha1Table[top]))
+            console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
         else:
+            console.debug("{} ({}) is not found. Linking.".format(sha1Table[top], top))
             try:
                 subprocess.run(cmdline, shell=True,
                                stdout=subprocess.PIPE, check=True)
@@ -64,7 +65,9 @@ def single_linking(top):
                                   utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
                                                        list(map(lambda x: sha1Table[x], deps))))
                 return False
+    finalDepListEditLock.acquire()
     finalDepList.append(top)
+    finalDepListEditLock.release()
     updateDepQueue(top)
     return True
 
@@ -74,8 +77,6 @@ def updateDepQueue(top, asyncio=True):
         if asyncio:
             lock_countEdit[i].acquire()
         dependencyList[i]["pendingDepCount"] -= 1
-        console.debug(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
-            map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
         if asyncio:
             lock_countEdit[i].release()
         if dependencyList[i]["pendingDepCount"] == 0:
@@ -157,24 +158,33 @@ def do_process(data):
             if j in asPath:
                 dependencyList[hashedItemPath]["pendingDepCount"] += 1
             dependentList[j].append(hashedItemPath)
+        if dependencyList[hashedItemPath]["pendingDepCount"] == 0:
+            console.warn("Pushing {} ({}) unnaturally into linking queue".format(itemPath, hashedItemPath))
+            linkingTaskQueue.put(hashedItemPath)
 
     for i in finalDepList:
         updateDepQueue(i, asyncio=False)
 
-    # print(dependencyList)
-    # print(dependentList)
-
     ctr = len(graphData)
     ctrAll = ctr
+    p = Pool()
     while ctr > 0:
-        p = Pool(1)
-        while not linkingTaskQueue.empty():
-            top = linkingTaskQueue.get()
+            top = None
+            try:
+             top = linkingTaskQueue.get_nowait()
+            except Empty:
+               for s in graphData:
+                 i = utils.sha1sum(s["target"]["abs_path"])
+                 if i not in finalDepList and dependencyList[i]["pendingDepCount"] == 0:
+                    console.debug("Successfully recovered from an empty queue")
+                    updateDepQueue(i)
+                    finalDepList.append(i)
+               continue
             ctr -= 1
             console.info("Link in progress: [{}/{}]".format(ctrAll - ctr, ctrAll))
             p.apply_async(single_linking, args=(top,), error_callback=console_error_and_exit)
-        p.close()
-        p.join()
+    p.close()
+    p.join()
 
     console.success("All targets are linked.")
     console.info("Renaming")
