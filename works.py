@@ -128,43 +128,21 @@ def do_process(data):
     console.info("Linking files")
     graphData = data["scripts"]
 
-    asPath = set()
     for i in graphData:
-        asPath.add(utils.sha1sum(i["target"]["abs_path"]))
-    for i in finalDepList:
-        asPath.add(i)
-
-    for i in graphData:
-        # Initial data
         itemPath = i["target"]["abs_path"]
         hashedItemPath = utils.sha1sum(itemPath)
         sha1Table[hashedItemPath] = itemPath
         itemDependencies = i["target"]["dependencies"]
         dependencyList[hashedItemPath] = utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table))
 
-    #  generate later <-- generate first
-    #  cL[0]  cL[1]   ...  cl[n] cl[n+1] ...
-
-    currList = []
-    for i in dependencyList.keys():
-        currList.append(i)
-        utils.checkItemInChain(i, currList, dependencyList)
-
-    realList = []
-    for i in reversed(currList):
-        if i not in realList:
-            realList.append(i)
-
-    console.debug("Linking sequence:", realList)
-    doneList = set()
+    currList = utils.topoSort(dependencyList, finalDepList)
+    if len(currList) != len(graphData):
+        console.warn("Bad consistance on linking recipe")
+    console.debug("Linking sequence:", currList, "or", list(map(lambda x: sha1Table[x], currList)))
     ctrLen = len(currList)
-    print("Build sequence:", list(map(lambda x: sha1Table[x], currList)))
     p = Pool()
-    for idx, obj in enumerate(realList):
-        if obj in doneList:
-            continue
-        doneList.add(obj)
-        console.info("Link in progress: [{}/{} steps]".format(idx + 1, ctrLen))
+    for idx, obj in enumerate(currList):
+        console.info("Linking {} ({})  [{}/{}]".format(sha1Table[obj], obj, idx + 1, ctrLen))
         p.apply_async(single_linking, args=(obj,), error_callback=console_error_and_exit)
     p.close()
     p.join()

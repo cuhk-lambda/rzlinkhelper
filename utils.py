@@ -4,7 +4,7 @@ import sys
 from termcolor import colored
 from multiprocessing import Lock
 from hashlib import sha1
-from os.path import realpath
+from copy import deepcopy
 
 settings = {
     "callpass_library_path": "./libcallpass.so",
@@ -129,8 +129,19 @@ def hasNoDependency(fullpath):
     return fullpath[-2:] == ".o"
 
 
-def checkItemInChain(item, chain, deps):
-    for i in deps[item]:
-        if i in chain:
-            chain.append(i)
-            checkItemInChain(i, chain, deps)
+def topoSort(targets, excludes):
+    dup = deepcopy(targets)
+    seq = []
+    for idx, key in enumerate(dup):
+        dup[key] = [r for r in dup[key] if r not in excludes]
+    keyLen = len(dup.keys())
+    while len(seq) < keyLen:
+        removePending = []
+        for i in dup.copy():
+            if len(dup[i]) == 0:
+                seq.append(i)
+                removePending.append(i)
+                del dup[i]
+        for idx, key in enumerate(dup):
+            dup[key] = [r for r in dup[key] if r not in removePending]
+    return seq
