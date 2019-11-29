@@ -33,7 +33,7 @@ def single_compile(cmd, hashname, execname, r, totalLength):
                        stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError:
         console.error("Error compiling {}".format(execname))
-        sys.exit(2)
+        return False
     return True
 
 
@@ -49,39 +49,43 @@ def single_linking(top):
         cmdline = utils.getllvmLinkCmd(
             realpath(utils.GET("object_dir") + "/" + top), list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
         console.debug(cmdline)
-        console.info("Linking " + top)
+        console.info("Linking {} ({})".format(sha1Table[top], top))
         if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
-            console.info("{} found. Skipping".format(top))
+            console.info("{} is found. Skipping.".format(sha1Table[top]))
         else:
             try:
                 subprocess.run(cmdline, shell=True,
                                stdout=subprocess.PIPE, check=True)
             except subprocess.CalledProcessError:
-                console.error("Error linking {}".format(top))
+                console.error("Error linking {} ({})".format(sha1Table[top], top))
                 console.error("Related dependcies:")
                 for i in deps:
                     console.error("{} ({})".format(sha1Table[i], i))
                     console.error("cmdline by original filenames: ",
                                   utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
                                                        list(map(lambda x: sha1Table[x], deps))))
-                sys.exit(2)
+                return False
     finalDepList.append(top)
     for i in dependentList[top]:
         lock_countEdit[i].acquire()
         dependencyList[i]["pendingDepCount"] -= 1
-        print(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
-            map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
+        # console.debug(i, "depcnt: ", dependencyList[i]["pendingDepCount"], list(
+        #     map(lambda x: sha1Table[x], dependencyList[i]["dependencies"])))
         lock_countEdit[i].release()
         if dependencyList[i]["pendingDepCount"] <= 1:
-            print("Pushing", i)
+            console.debug("Pushing {} ({}) into linking queue".format(sha1Table[i], i))
             linkingTaskQueue.put(i)
     return True
+
+
+def console_error_and_exit(st):
+    console.error(st)
+    sys.exit(1)
 
 
 def do_process(data):
     # Preparing directories
     utils.checkDir(utils.GET("object_dir"), "Object")
-    utils.checkDir(utils.GET("target_dir"), "Target")
     originalCXX = utils.GET("original_cxx_executable")
     originalCC = utils.GET("original_cc_executable")
 
@@ -92,6 +96,7 @@ def do_process(data):
         i = data["compile"][r]
         execname = "(unknown)"
         cmdline = list(filter(lambda x: x != "", i.split(" ")))
+        filehashpath = ["0" for i in range(0, 40)]
         for argnum in range(len(cmdline)):
             if cmdline[argnum] == originalCXX:
                 cmdline[argnum] = utils.GET("targeted_cxx_executable")
@@ -112,12 +117,14 @@ def do_process(data):
                 cmdline[argnum] = ""
         command = " ".join(cmdline)
         compileTaskPool.apply_async(
-            single_compile, args=(command, filehashpath, execname, r, totalLength), error_callback=console.error)
+            single_compile, args=(command, filehashpath, execname, r, totalLength),
+            error_callback=console_error_and_exit)
         finalDepList.append(filehashpath)
     compileTaskPool.close()
     compileTaskPool.join()
 
     # Construct the graph
+    console.success("All object files are compiled.")
     console.info("Linking files")
     graphData = data["scripts"]
 
@@ -135,7 +142,7 @@ def do_process(data):
         dependencyList[hashedItemPath] = {
             "path": itemPath,
             "hashed": hashedItemPath,
-            "dependencies": utils.deduplicate(utils.pathToValidNames(itemDependencies, sha1Table)),
+            "dependencies": utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table)),
             "type": itemType
         }
         dependencyList[hashedItemPath]["pendingDepCount"] = 0
@@ -158,12 +165,14 @@ def do_process(data):
     # print(dependentList)
 
     ctr = len(graphData)
+    ctrAll = ctr
     while ctr > 0:
-        p = Pool(None)
+        p = Pool(1)
         while not linkingTaskQueue.empty():
             top = linkingTaskQueue.get()
             ctr -= 1
-            p.apply_async(single_linking, args=(top,), error_callback=console.error)
+            console.info("Link in progress: [{}/{}]".format(ctrAll - ctr, ctrAll))
+            p.apply_async(single_linking, args=(top,), error_callback=console_error_and_exit)
         p.close()
         p.join()
 

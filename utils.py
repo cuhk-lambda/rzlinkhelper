@@ -43,12 +43,12 @@ class Console():
     @staticmethod
     def warn(*st):
         with iolock:
-          print(colored("[WARN]", "yellow"), *st)
+            print(colored("[WARN]", "yellow"), *st)
 
     @staticmethod
     def error(*st):
         with iolock:
-          print(colored("[ERRR]", "red"), *st)
+            print(colored("[ERRR]", "red"), *st)
 
     @staticmethod
     def log(*st):
@@ -62,7 +62,7 @@ class Console():
     def debug(*st):
         if GET("debug"):
             with iolock:
-              print("[DEBG]", *st)
+                print("[DEBG]", *st)
 
 
 def checkDir(subdir, name):
@@ -96,7 +96,7 @@ def findNames(path):
     return list(map(findName, path))
 
 
-def pathToValidNames(path, table):
+def pathToSha1(path, table):
     names = []
     for i in path:
         if i[-2:] == ".a" or \
