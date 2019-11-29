@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CMAKER_UPSTREAM="schrodingerzhu/cmaker"
+CMAKER_UPSTREAM="outloudvi/cmaker"
 
 git submodule init
 git submodule update
