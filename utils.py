@@ -20,13 +20,10 @@ settings = {
 
 iolock = Lock()
 
-try:
-    custSettings = json.load(open("settings.json"))
-    for i in custSettings.items():
-        settings[i[0]] = i[1]
-except:
-    pass
-
+def loadSettings(fp):
+    custSettings = json.load(fp)
+    for i in custSettings.keys():
+        settings[i] = custSettings[i]
 
 def GET(name):
     if name in settings:

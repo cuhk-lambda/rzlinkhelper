@@ -15,7 +15,7 @@ def main():
     else:
         console.error("Cmaker result not found or unreadable.")
         sys.exit(1)
-    
+
     try:
         json_data = json.load(open(sys.argv[1]))
         assert json_data["scripts"]
@@ -23,7 +23,12 @@ def main():
     except:
         console.error("Failed to parse Cmaker file")
         sys.exit(1)
-    
+    try:
+        utils.loadSettings(open("settings.json"))
+        console.success("Settings loaded.")
+    except Exception as e:
+        console.warn("Settings not loaded, because of:", e)
+    console.debug("Settings", utils.settings)
     works.do_process(json_data)
 
 
