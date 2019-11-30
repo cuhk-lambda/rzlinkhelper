@@ -35,6 +35,7 @@ You can configure options on settings.json of your WORKDIR. Available options:
 * `targeted_cc_executable`: CC executable name
 * `llvm_link_executable`: LLVM linking executable name
 * `preserve_process`: The file name for saving SHA-1 relationship for the sake of debugging. Disable this with an empty string.
+* `toposort_verbose_logging_dir`: Log topo sort intermediate processes. Disable this with an empty string.
 
 
 ``` jsonc
@@ -47,6 +48,7 @@ You can configure options on settings.json of your WORKDIR. Available options:
     "targeted_cxx_executable": "/usr/bin/clang++",
     "targeted_cc_executable": "/usr/bin/clang",
     "llvm_link_executable": "/usr/bin/llvm-link",
-    "preserve_process": "sha1.json"
+    "preserve_process": "sha1.json",
+    "toposort_verbose_logging_dir": ""
 }
 ```

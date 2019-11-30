@@ -73,6 +73,7 @@ def console_error_and_exit(st):
 def do_process(data):
     # Preparing directories
     utils.checkDir(utils.GET("object_dir"), "Object")
+    utils.checkDir(utils.GET("toposort_verbose_logging_dir"), "Toposort verbose logging")
     originalCXX = utils.GET("original_cxx_executable")
     originalCC = utils.GET("original_cc_executable")
 
@@ -136,7 +137,7 @@ def do_process(data):
         dependencyList[hashedItemPath] = utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table))
 
     try:
-        currList = utils.topoSort(dependencyList, finalDepList)
+        currList = utils.topoSort(dependencyList, finalDepList, sha1Table)
     except ValueError:
         console.error("Topo sort failed to complete. Please check your data.")
         sys.exit(1)

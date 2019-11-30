@@ -1,11 +1,12 @@
 {
     "callpass_library_path": "./libcallpass.so",
     "object_dir": "objects",
-    "debug": True,
+    "debug": true,
     "original_cxx_executable": "/usr/bin/c++",
     "original_cc_executable": "/usr/bin/cc",
     "targeted_cxx_executable": "/usr/bin/clang++",
     "targeted_cc_executable": "/usr/bin/clang",
     "llvm_link_executable": "/usr/bin/llvm-link",
-    "preserve_process": "sha1.json"
+    "preserve_process": "sha1.json",
+    "toposort_verbose_logging_dir": ""
 }

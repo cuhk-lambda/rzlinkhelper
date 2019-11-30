@@ -15,7 +15,8 @@ settings = {
     "targeted_cxx_executable": "/usr/bin/clang++",
     "targeted_cc_executable": "/usr/bin/clang",
     "llvm_link_executable": "/usr/bin/llvm-link",
-    "preserve_process": "sha1.json"
+    "preserve_process": "sha1.json",
+    "toposort_verbose_logging_dir": ""
 }
 
 iolock = Lock()
@@ -126,13 +127,21 @@ def hasNoDependency(fullpath):
     return fullpath[-2:] == ".o"
 
 
-def topoSort(targets, excludes):
+def topoSort(targets, excludes, table):
     dup = deepcopy(targets)
     seq = []
     for idx, key in enumerate(dup):
         dup[key] = [r for r in dup[key] if r not in excludes]
     keyLen = len(dup.keys())
+    rnd = 0
+    logDir = GET("toposort_verbose_logging_dir")
+    logging = True if logDir != "" and logDir != None else False
+    if logging:
+        Console.warn("Toposort verbose logging is on. Logs will be saved to {}/. Be cautious since it will be a lot of data.".format(logDir))
     while len(seq) < keyLen:
+        if logging:
+            json.dump(unravel(dup, table), open(logDir + "/" + str(rnd) + ".rest","w"))
+            json.dump(list(map(lambda x:table[x], seq)), open(logDir + "/" + str(rnd) + ".curr","w"))
         removePending = []
         for i in dup.copy():
             if len(dup[i]) == 0:
@@ -140,7 +149,15 @@ def topoSort(targets, excludes):
                 removePending.append(i)
                 del dup[i]
         if len(removePending) == 0:
+            Console.debug("Current queue:", seq)
             raise ValueError
         for idx, key in enumerate(dup):
             dup[key] = [r for r in dup[key] if r not in removePending]
+        rnd += 1
     return seq
+
+def unravel(obj, table):
+    newobj = {}
+    for i in obj.keys():
+        newobj[table[i]] = list(map(lambda x:table[x], obj[i]))
+    return newobj
