@@ -73,7 +73,8 @@ def console_error_and_exit(st):
 def do_process(data):
     # Preparing directories
     utils.checkDir(utils.GET("object_dir"), "Object")
-    utils.checkDir(utils.GET("toposort_verbose_logging_dir"), "Toposort verbose logging")
+    if utils.GET("toposort_verbose_logging_dir") is not None and utils.GET("toposort_verbose_logging_dir") != "":
+        utils.checkDir(utils.GET("toposort_verbose_logging_dir"), "Toposort verbose logging")
     originalCXX = utils.GET("original_cxx_executable")
     originalCC = utils.GET("original_cc_executable")
 
