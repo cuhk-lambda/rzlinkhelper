@@ -117,17 +117,7 @@ def do_process(data):
     # Construct the graph
     console.success("All object files are compiled.")
 
-    preserveProcess = utils.GET("preserve_process")
-    if preserveProcess != None and preserveProcess != "":
-        console.info("Saving metadata")
-        sha1FilePath = utils.GET("object_dir") + "/" + preserveProcess
-        try:
-            json.dump(sha1Table, open(utils.GET("object_dir") + "/" + preserveProcess, "w"))
-            console.success("Metadata saved.")
-        except PermissionError:
-            console.warn("Process file {} is not writable, while preseve_process is on.".format(sha1FilePath))
-
-    console.info("Linking files")
+    console.info("Preparing linking relationships")
     graphData = data["scripts"]
 
     for i in graphData:
@@ -140,6 +130,17 @@ def do_process(data):
             console.warn("Self-circle found. Ignoring.")
             dependencyList[hashedItemPath].remove(hashedItemPath)
 
+    preserveProcess = utils.GET("preserve_process")
+    if preserveProcess != None and preserveProcess != "":
+        console.info("Saving metadata")
+        sha1FilePath = utils.GET("object_dir") + "/" + preserveProcess
+        try:
+            json.dump(sha1Table, open(utils.GET("object_dir") + "/" + preserveProcess, "w"))
+            console.success("Metadata saved.")
+        except PermissionError:
+            console.warn("Process file {} is not writable, while preseve_process is on.".format(sha1FilePath))
+
+    console.info("Calculating linking sequence")
     try:
         currList = utils.topoSort(dependencyList, finalDepList, sha1Table)
     except ValueError:
@@ -149,6 +150,7 @@ def do_process(data):
     if len(currList) != len(graphData):
         console.warn("Bad consistance on linking recipe")
     console.debug("Linking sequence:", currList, "or", list(map(lambda x: sha1Table[x], currList)))
+    console.info("Start linking")
     ctrLen = len(currList)
     p = Pool()
     for idx, obj in enumerate(currList):
