@@ -1,6 +1,6 @@
 # rzlinkhelper
 
-[![CircleCI](https://circleci.com/gh/outloudvi/rzlinkhelper/tree/master.svg?style=svg)](https://circleci.com/gh/outloudvi/rzlinkhelper/tree/master)
+[![CircleCI](https://circleci.com/gh/cuhk-lambda/rzlinkhelper/tree/master.svg?style=svg)](https://circleci.com/gh/cuhk-lambda/rzlinkhelper/tree/master)
 
 Reasonable link helper, good for you to analyze.
 
