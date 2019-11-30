@@ -135,6 +135,9 @@ def do_process(data):
         sha1Table[hashedItemPath] = itemPath
         itemDependencies = i["target"]["dependencies"]
         dependencyList[hashedItemPath] = utils.deduplicate(utils.pathToSha1(itemDependencies, sha1Table))
+        if hashedItemPath in dependencyList[hashedItemPath]:
+            console.warn("Self-circle found. Ignoring.")
+            dependencyList[hashedItemPath].remove(hashedItemPath)
 
     try:
         currList = utils.topoSort(dependencyList, finalDepList, sha1Table)
