@@ -12,8 +12,12 @@ sha1Table = {}
 dependencyList = {}
 
 
-def single_compile(cmd, hashname, execname, r, totalLength, finishedList):
-    if (os.access(utils.GET("object_dir") + "/" + hashname, os.R_OK)):
+def single_compile(cmd, hashname, execname, r, totalLength, finishedList, clean=False):
+    if clean and os.access(utils.GET("object_dir") + "/" + hashname, os.W_OK):
+        console.info(
+            "Found {}, cleaning before rebuild.".format(execname))
+        os.unlink(utils.GET("object_dir") + "/" + hashname)
+    if os.access(utils.GET("object_dir") + "/" + hashname, os.R_OK):
         console.info(
             "Found {}, skipping. [{}/{}]".format(execname, r + 1, totalLength))
     else:
@@ -29,7 +33,7 @@ def single_compile(cmd, hashname, execname, r, totalLength, finishedList):
     return True
 
 
-def single_linking(top, finishedList):
+def single_linking(top, finishedList, clean=False):
     if utils.hasNoDependency(sha1Table[top]):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
@@ -71,7 +75,7 @@ def console_error_and_exit(st):
     sys.exit(1)
 
 
-def do_process(data):
+def do_process(data, settings):
     # Preparing directories
     utils.checkDir(utils.GET("object_dir"), "Object")
     if utils.GET("toposort_verbose_logging_dir") is not None and utils.GET("toposort_verbose_logging_dir") != "":
@@ -109,7 +113,7 @@ def do_process(data):
                 cmdline[argnum] = ""
         command = " ".join(cmdline)
         compileTaskPool.apply_async(
-            single_compile, args=(command, filehashpath, execname, r, totalLength, finishedList),
+            single_compile, args=(command, filehashpath, execname, r, totalLength, finishedList, settings.clean),
             error_callback=console_error_and_exit)
     compileTaskPool.close()
     compileTaskPool.join()
@@ -146,6 +150,14 @@ def do_process(data):
     except ValueError:
         console.error("Topo sort failed to complete. Please check your data.")
         sys.exit(1)
+    console.success("Linking sequence calculated.")
+
+    if settings.clean or settings.clean_linking:
+        console.info("Cleaning linking targets")
+        for i in dependencyList.keys():
+            if os.access(utils.GET("object_dir") + "/" + i, os.W_OK):
+                os.unlink(utils.GET("object_dir") + "/" + i)
+        console.success("Linking targets cleaned.")
 
     if len(currList) != len(graphData):
         console.warn("Bad consistance on linking recipe")
