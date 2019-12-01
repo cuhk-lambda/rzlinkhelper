@@ -3,7 +3,7 @@ import sys
 import utils
 import os
 import json
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 from os.path import realpath
 
 console = utils.Console()
@@ -12,29 +12,29 @@ sha1Table = {}
 dependencyList = {}
 
 
-def single_compile(cmd, hashname, execname, r, totalLength):
+def single_compile(cmd, hashname, execname, r, totalLength, finishedList):
     if (os.access(utils.GET("object_dir") + "/" + hashname, os.R_OK)):
         console.info(
             "Found {}, skipping. [{}/{}]".format(execname, r + 1, totalLength))
-        return True
     else:
         console.info("Compiling {} [{}/{}]".format(execname, r + 1, totalLength))
         console.debug(cmd)
-    try:
-        subprocess.run(cmd, shell=True,
-                       stdout=subprocess.PIPE, check=True)
-    except subprocess.CalledProcessError:
-        console.error("Error compiling {}".format(execname))
-        return False
+        try:
+            subprocess.run(cmd, shell=True,
+                           stdout=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError:
+            console.error("Error compiling {}".format(execname))
+            return False
+    finishedList.append(hashname)
     return True
 
 
-def single_linking(top):
+def single_linking(top, finishedList):
     if utils.hasNoDependency(sha1Table[top]):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
     else:
-        if (os.access(utils.GET("object_dir") + "/" + top, os.R_OK)):
+        if os.access(utils.GET("object_dir") + "/" + top, os.R_OK):
             console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
             return True
         deps = dependencyList[top]
@@ -45,7 +45,7 @@ def single_linking(top):
         files = deps.copy()
         while True:
             for i in files:
-                if os.access(utils.GET("object_dir") + "/" + i, os.R_OK):
+                if i in finishedList:
                     files.remove(i)
             if len(files) == 0:
                 break
@@ -62,6 +62,7 @@ def single_linking(top):
                               utils.getllvmLinkCmd(realpath(utils.GET("object_dir") + "/" + sha1Table[top]),
                                                    list(map(lambda x: sha1Table[x], deps))))
             return False
+    finishedList.append(top)
     return True
 
 
@@ -78,7 +79,7 @@ def do_process(data):
     originalCXX = utils.GET("original_cxx_executable")
     originalCC = utils.GET("original_cc_executable")
 
-    finalDepList = []
+    finishedList = Manager().list()
 
     totalLength = len(data["compile"])
     compileTaskPool = Pool()
@@ -108,9 +109,8 @@ def do_process(data):
                 cmdline[argnum] = ""
         command = " ".join(cmdline)
         compileTaskPool.apply_async(
-            single_compile, args=(command, filehashpath, execname, r, totalLength),
+            single_compile, args=(command, filehashpath, execname, r, totalLength, finishedList),
             error_callback=console_error_and_exit)
-        finalDepList.append(filehashpath)
     compileTaskPool.close()
     compileTaskPool.join()
 
@@ -142,7 +142,7 @@ def do_process(data):
 
     console.info("Calculating linking sequence")
     try:
-        currList = utils.topoSort(dependencyList, finalDepList, sha1Table)
+        currList = utils.topoSort(dependencyList, finishedList, sha1Table)
     except ValueError:
         console.error("Topo sort failed to complete. Please check your data.")
         sys.exit(1)
@@ -155,7 +155,7 @@ def do_process(data):
     p = Pool()
     for idx, obj in enumerate(currList):
         console.info("Linking {} ({})  [{}/{}]".format(sha1Table[obj], obj, idx + 1, ctrLen))
-        p.apply_async(single_linking, args=(obj,), error_callback=console_error_and_exit)
+        p.apply_async(single_linking, args=(obj,finishedList), error_callback=console_error_and_exit)
     p.close()
     p.join()
     console.success("All targets are linked.")
