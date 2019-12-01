@@ -21,10 +21,12 @@ settings = {
 
 iolock = Lock()
 
+
 def loadSettings(fp):
     custSettings = json.load(fp)
     for i in custSettings.keys():
         settings[i] = custSettings[i]
+
 
 def GET(name):
     if name in settings:
@@ -137,11 +139,15 @@ def topoSort(targets, excludes, table):
     logDir = GET("toposort_verbose_logging_dir")
     logging = True if logDir != "" and logDir != None else False
     if logging:
-        Console.warn("Toposort verbose logging is on. Logs will be saved to {}/. Be cautious since it will be a lot of data.".format(logDir))
+        Console.warn(
+            "Toposort verbose logging is on. Logs will be saved to {}/. Be cautious since it will be a lot of data.".format(
+                logDir))
     while len(seq) < keyLen:
         if logging:
-            json.dump(unravel(dup, table), open(logDir + "/" + str(rnd) + ".rest","w"))
-            json.dump(list(map(lambda x:table[x], seq)), open(logDir + "/" + str(rnd) + ".curr","w"))
+            json.dump(unravel(dup, table), open(
+                logDir + "/" + str(rnd) + ".rest", "w"))
+            json.dump(list(map(lambda x: table[x], seq)), open(
+                logDir + "/" + str(rnd) + ".curr", "w"))
         removePending = []
         for i in dup.copy():
             if len(dup[i]) == 0:
@@ -156,8 +162,9 @@ def topoSort(targets, excludes, table):
         rnd += 1
     return seq
 
+
 def unravel(obj, table):
     newobj = {}
     for i in obj.keys():
-        newobj[table[i]] = list(map(lambda x:table[x], obj[i]))
+        newobj[table[i]] = list(map(lambda x: table[x], obj[i]))
     return newobj

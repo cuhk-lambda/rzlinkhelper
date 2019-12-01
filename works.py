@@ -155,7 +155,7 @@ def do_process(data):
     p = Pool()
     for idx, obj in enumerate(currList):
         console.info("Linking {} ({})  [{}/{}]".format(sha1Table[obj], obj, idx + 1, ctrLen))
-        p.apply_async(single_linking, args=(obj,finishedList), error_callback=console_error_and_exit)
+        p.apply_async(single_linking, args=(obj, finishedList), error_callback=console_error_and_exit)
     p.close()
     p.join()
     console.success("All targets are linked.")
