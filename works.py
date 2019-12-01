@@ -33,13 +33,13 @@ def single_linking(top, finishedList):
     if utils.hasNoDependency(sha1Table[top]):
         console.debug(
             "{} ({}) has no dependency. Skipping.".format(sha1Table[top], top))
+    elif os.access(utils.GET("object_dir") + "/" + top, os.R_OK):
+        console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
     else:
-        if os.access(utils.GET("object_dir") + "/" + top, os.R_OK):
-            console.info("{} ({}) is found. Skipping.".format(sha1Table[top], top))
-            return True
         deps = dependencyList[top]
         cmdline = utils.getllvmLinkCmd(
-            realpath(utils.GET("object_dir") + "/" + top), list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
+            realpath(utils.GET("object_dir") + "/" + top),
+            list(map(lambda x: utils.GET("object_dir") + "/" + x, deps)))
         console.debug(cmdline)
         console.info("Waiting for prequisites of {} ({})...".format(sha1Table[top], top))
         files = deps.copy()
